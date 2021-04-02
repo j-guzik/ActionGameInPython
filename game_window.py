@@ -204,6 +204,70 @@ class Platform(pygame.sprite.Sprite):
                 surface.blit(self.image_list[3], [self.rect.x + i, self.rect.y])
             surface.blit(self.image_list[3], [self.rect.x + self.rect.width - 179, self.rect.y])
 
+class MovingPlatform(Platform):
+    def __init__(self, image_list, width, height, rect_x, rect_y):
+        super().__init__(image_list, width, height, rect_x, rect_y)
+        self.movement_x = 0
+        self.movement_y = 0
+        self.boundary_top = 0
+        self.boundary_bottom = 0
+        self.boundary_right = 0
+        self.boundary_left = 0
+        self.player = None
+
+    def update(self):
+        self.rect.x += self.movement_x
+        if pygame.sprite.collide_rect(self, self.player):
+            if self.movement_x < 0:
+                self.player.rect.right = self.rect.left
+            else:
+                self.player.rect.left = self.rect.right
+
+        self.rect.y += self.movement_y
+        if pygame.sprite.collide_rect(self, self.player):
+            if self.movement_y < 0:
+                self.player.rect.bottom = self.rect.top
+            else:
+                self.player.rect.top = self.rect.bottom
+
+        if (self.rect.bottom > self.boundary_bottom or self.rect.top < self.boundary_top):
+            self.movement_y *= -1
+
+        position = self.rect.x - self.player.level.world_shift
+        if (position + self.width > self.boundary_right or position < self.boundary_left):
+            self.movement_x *= -1
+
+class Wall(Platform):
+    def __init__(self, image_list, image_corner_list, width, height, rect_x, rect_y):
+        super().__init__(image_list, width, height, rect_x, rect_y)
+        self.image_corner_list = image_corner_list
+
+
+    def draw(self, surface):
+        for row in range(0, self.height, 77):
+            if row == 0:
+                surface.blit(self.image_corner_list[0], self.rect)
+                for column in range(77, self.width - 77, 77):
+                    surface.blit(self.image_list[2], [self.rect.x + column, self.rect.y])
+                surface.blit(self.image_corner_list[1],
+                             [self.rect.x + self.width - 77, self.rect.y])
+
+            elif row == self.height - 77:
+                surface.blit(self.image_list[1],
+                             [self.rect.x, self.rect.y + row])
+                for column in range(77, self.width - 77, 77):
+                    surface.blit(self.image_list[4],
+                                 [self.rect.x + column, self.rect.y + row])
+                surface.blit(self.image_list[3],
+                             [self.rect.x + self.width - 77, self.rect.y + row])
+
+            else:
+                surface.blit(self.image_list[1],
+                             [self.rect.x, self.rect.y + row])
+                for column in range(77, self.width - 77, 77):
+                    surface.blit(self.image_list[0], [self.rect.x + column, self.rect.y + row])
+                surface.blit(self.image_list[3],
+                             [self.rect.x + self.width - 77, self.rect.y + row])
 
 #ogólna klasa planszy
 class Level:
@@ -219,6 +283,24 @@ class Level:
         for p in self.set_of_platforms:
             p.draw(surface)
 
+    def _shift_world(self, shift_x):
+        self.world_shift += shift_x
+
+        for p in self.set_of_platforms | self.set_of_walls:
+            p.rect.x += shift_x
+
+        for item in self.set_of_items:
+            item.rect.x += shift_x
+
+        for a in self.set_of_arrows:
+            a.rect.x += shift_x
+
+        for f in self.set_of_enemy_arrows:
+            f.rect.x += shift_x
+
+        for e in self.set_of_enemies:
+            e.rect.x += shift_x
+
 
 # klasa planszy nr1
 class Level_1(Level):
@@ -231,7 +313,6 @@ class Level_1(Level):
         self.create_platform_enemies()
         self.create_flaying_enemies()
 
-
     def _create_platforms(self):
         ws_platform_static = [[66 * 63, 63, -13, gm.HEIGHT - 63],
                               [9 * 74, 76, 100, 500],
@@ -242,6 +323,34 @@ class Level_1(Level):
         for ws in ws_platform_static:
             object_P = Platform(gm.GRASS_LIST, *ws)
             self.set_of_platforms.add(object_P)
+
+    def create_moving_platforms(self):
+        mp_x = MovingPlatform(gm.GRASS_LIST, 227, 27, 1900, 550)
+        mp_x.boundary_right = 2200
+        mp_x.boundary_left = 1700
+        mp_x.movement_x = -2
+        mp_x.player = self.player
+        self.set_of_platforms.add(mp_x)
+
+        mp_y = MovingPlatform(gm.GRASS_LIST, 4 * 60, 40, 1400, 400)
+        mp_y.boundary_top = 350
+        mp_y.boundary_bottom = 550
+        mp_y.movement_y = 1
+        mp_y.player = self.player
+        self.set_of_platforms.add(mp_y)
+
+        mp_y = MovingPlatform(gm.GRASS_LIST, 227, 27, 2050, 400)
+        mp_y.boundary_top = 350
+        mp_y.boundary_bottom = 500
+        mp_y.movement_y = 1
+        mp_y.player = self.player
+        self.set_of_platforms.add(mp_y)
+
+    def create_walls(self):
+        ws_wall = [[4 * 77, 10 * 77, -4 * 77, 0], [10 * 77, 10 * 77, 4100, 0]]
+        for ws in ws_wall:
+            wall = Wall(gm.WALL_LIST, gm.WALL_CORNER_LIST, *ws)
+            self.set_of_walls.add(wall)
 
 # konkretyzacja obiektow
 player = Player(gm.STAND_R)
