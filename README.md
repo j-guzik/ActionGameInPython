@@ -15,7 +15,7 @@ How to play?
 * right -> D
 * shot -> F
 	
-![](https://github.com/j-guzik/ActionGameInPython/blob/main/video/arcade_game.gif)  
+![](https://github.com/j-guzik/ActionGameInPython/blob/main/video/GameInPython.gif)  
 
 ## Technologies
 Project is created with:
